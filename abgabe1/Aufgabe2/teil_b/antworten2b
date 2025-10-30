@@ -1,0 +1,7 @@
+getpid() gibt die prozess ID des Prozesses selber zurück
+getppid() gibt die ID des parent Prozesses zurück
+wait() wartet, bis der Child prozess fertig ist
+wait() nimmt entweder eine PID, einen PROZESS_NAME oder nicht/NULL als argument.
+    PID und Prozess_name sind selbsterklärend.
+    Wenn nichts/NULL gegeben ist, wird auf alle Prozesse gewartet, welche noch im hintergrund laufen
+    wait() returned die ID des jobs, auf den gewartet wird.
