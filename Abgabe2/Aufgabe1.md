@@ -1,5 +1,5 @@
 a) Schauen Sie sich das Feld für die Dateigröße der Datei A.bmp im File-Header an und ermitteln Sie daraus die Byte-Reihenfolge (endianness).
-
+little endian?
 
 b) Geben Sie alle Werte für den BITMAPINFOHEADER der Datei A.bmp an.
 
