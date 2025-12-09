@@ -1,0 +1,30 @@
+Nr.1 
+    a) 78 01 00 00  Die Zahlen werte werden hier in little Endian geschrieben. Der Wert würde also (7 * 16 + 8) + 256 = 
+    b) 
+    ab byte 15
+    Header-Größe = 28 
+    Bildbreite = 0A 
+    Bildhöhe = 0A 
+    Anzahl Farbebene = 01
+    Bits pro Pixel = 18
+    Kompressionsmethode = 0
+    Bildgröße = 42 01 00 00
+    Horizontale Auflösung = C2 1E
+    Vertikale Auflösung = C2 1E
+    Anzahl Farben = 00
+    Anzahl wichtiger Farben = 00
+    c) 
+    C_1 = 0C 00 00 00 | 0C 00 00 00
+    C_2 = 0C 00 00 00 | F4 FF FF FF
+    Dies könnte bedeuten, dass C_2 deutlich höher ist als C_1
+    d) 
+    Bpp nur 1, Bildgröße 32, Auflösung beide richtung 12 0B
+
+Nr.2
+    a)  A: BH = 0A BW = 0A
+        A: BH = 09 BW = 09
+        Pixel starten ab Zeile 30  Spalte 06
+        Die farben der Pixel werden als RGB hexadezimalzahl abgespeichert
+    b)
+        
+    c)
