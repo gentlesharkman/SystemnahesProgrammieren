@@ -182,74 +182,125 @@ void print_rle(RLE* rle, uint8_t counts_per_line) {
     printf("\n");
 }
 
+/**
+ * Versuch der Auslagerung ._." 
+uint8_t serializeNode(char* serialResult,  uint8_t* serialByte, uint64_t* secCount, uint64_t count, bool type, int size) {
+    if(type == 0) { *serialByte | 1; }
+    else { *serialByte & 0; }
+    *serialByte << size;
+    *serialByte | count;
+    *secCount -= count;
+    if(isHalfbyte) {
+        uint8_t temp = serialByte;
+        temp >> 4;
+        halfbyte << 4;
+        halfbyte | temp;
+        *serialResult[serialResultIndex++] = (char) halfbyte;
+        serialByte << 4;
+        halfbyte = serialByte;
+        if(serialByte == 0) {
+            isHalfbyte = false;
+            serialResult[serialResultIndex++] = (char) halfbyte;
+        }
+    }
+    else  { serialResult[serialResultIndex++] = (char) serialByte; }
+    
+}
+*/
+
 char* serialize_rle(RLE* rle, size_t* size) {
     /**
-    Von Head to tail durchgehen
-    1. Bit auf Art setzen: beim head 0, danach abwechselnd
-        variable, if type == 1, type = 0 und vise versa
-    if count <= 3: 0
-        Nächsten 2 bits = count aber von rechts
-    else: nächsten 6 bits
-
     Probleme: Wenn der count größer als 64
     -> Lösung: Die nächste Einheit kodiert den Rest
-
      */
-    bool type = 0;
-    unsigned int secCount = 0;
-    unsigned int* serialInt;
-    char* serialString;
-    RLENode* node = rle->head;
+    bool type = 0;                  //Which type is encoded by the section, 0 or 1
+    uint8_t serialByte;             //
+    char *serialResult;             //Result data of serialization
+    uint64_t serialResultIndex = 0; //Current index in the serialized string
+    uint8_t halfbyte;               //Temporarily saves half a byte of serialization
+    int resultSize;
 
-    
-    for(int i = 1; i <= *size; i++) {
+    for(RLENode* currentNode = rle->head; currentNode != NULL ; currentNode = currentNode->next) { //Loops through all the nodes
+        uint64_t secCount = currentNode->count; //
 
-        // Setzt Typ, der kodiert wird
-        if(type == 0) {
-            *serialInt | 1;
-            type = 1;
+        if(secCount == 0) { //Current node is done -> the type that's encoded switches
+            type += type % 2;
         }
-        else {
-            *serialInt & 0;
-            type = 0;
-        }
-        
-        // Setzt Anzahl der verwendeten 4-Bit Einheiten
-        // Setzt die Anzahl der Bits auf 0
-        // Fügt count hinzu
-        if(node->count <= 3) {
-            *serialInt & 10;
-            *serialInt << 2;
-            *serialInt | node->count;
-            secCount += 1;
-        }
-        else if(node->count <= 64) {
-            *serialInt & 11;
-            *serialInt << 6;
-            *serialInt | node->count;
-            secCount += 2;
-        }
-        else { 
-            // TODO: Falls count > 64
-        }
-        
-        
-        
+        while(secCount > 0) {
 
-        // Fügt Section zum String hinzu
-        *(serialString + secCount) = (char)serialInt;
+            if(secCount >= 64) {
+                resultSize += 2;
+                if(type == 0) { serialByte | 1; } //Set type to first bit
+                else { serialByte & 0; }
+                serialByte << 6;
+                serialByte | 63;
+                secCount -= 63;
 
+                if(halfbyte != 0) {
+                    uint8_t temp = serialByte;
+                    temp >> 4;
+                    halfbyte << 4;
+                    halfbyte | temp;
+                    serialResult[serialResultIndex++] = (char) halfbyte;
+                    serialByte << 4;
+                    halfbyte = serialByte;
+                }
+                
+                else { serialResult[serialResultIndex++] = (char) serialByte; }
+            }
+
+            else if(secCount > 3) {
+                resultSize += 2;
+                if(type == 0) { serialByte | 1; }
+                else { serialByte & 0; }
+                serialByte << 6;
+                serialByte | secCount;
+                secCount = 0;
+
+                if(halfbyte != 0) {
+                    uint8_t temp = serialByte;
+                    temp >> 4;
+                    halfbyte << 4;
+                    halfbyte | temp;
+                    serialResult[serialResultIndex++] = (char) halfbyte;
+                    serialByte << 4;
+                    halfbyte = serialByte;
+                }
+
+                else { serialResult[serialResultIndex++] = (char) serialByte; }
+            }
+
+            else {
+                resultSize += 1;
+                if(type == 0) { serialByte | 1; }
+                else { serialByte & 0; }
+                serialByte << 2;
+                serialByte | secCount;
+                secCount = 0;
+                
+                if(halfbyte != 0) {
+                    uint8_t temp = serialByte;
+                    temp >> 4;
+                    halfbyte << 4;
+                    halfbyte | temp;
+                    serialResult[serialResultIndex++] = (char) halfbyte;
+                    serialByte << 4;
+                    if(serialByte == 0) {
+                        serialResult[serialResultIndex++] = (char) halfbyte;
+                    }
+                    halfbyte = serialByte;
+                }
+
+            }
+            
+        }
     }
-    // speicher allokieren für ausgabe string
-    
-    return serialString;
+    serialResult[serialResultIndex++] = '\0';
+    char* result = malloc(resultSize/2 + 1);
+    *result = serialResult;
+    return result;
 }
 
 void deserialize_rle(RLE *rle, const char *data, size_t size) {
-    // TODO: Teilaufgabe 3
-    /**
-     * The `encode_rle` line is only added, so the function does something.
-     * You must remove it once you start implementing this function.
-     */
-    encode_rle(rle, data, size);
+   
 }
