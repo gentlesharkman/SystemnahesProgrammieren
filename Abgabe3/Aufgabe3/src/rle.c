@@ -1,6 +1,7 @@
 #include "../include/rle.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 typedef struct RLENode {
     uint64_t count;
@@ -212,35 +213,51 @@ char* serialize_rle(RLE* rle, size_t* size) {
     /**
     Probleme: Wenn der count größer als 64
     -> Lösung: Die nächste Einheit kodiert den Rest
-     */
+    
+Milos tragischer Code, der failte.
+
     bool type = 0;                  //Which type is encoded by the section, 0 or 1
     uint8_t serialByte;             //
-    char *serialResult;             //Result data of serialization
     uint64_t serialResultIndex = 0; //Current index in the serialized string
-    uint8_t halfbyte;               //Temporarily saves half a byte of serialization
+    uint8_t halfbyte = 0;  //Temporarily saves half a byte of serialization
     int resultSize;
+    RLENode* currentNode = rle->head;
+
+    while(currentNode) {
+        uint64_t currentCount = currentNode->count;
+        while (currentCount > 63) {
+            resultSize += 2;
+            currentCount -= 63;
+        }
+        if (currentCount > 3) {
+            resultSize += 2;
+        }  else if (currentCount > 0) {
+            resultSize += 1;
+        }
+        currentNode = currentNode->next;
+    }
+
+    char* serialResult = malloc((resultSize + 1) / 2);
 
     for(RLENode* currentNode = rle->head; currentNode != NULL ; currentNode = currentNode->next) { //Loops through all the nodes
         uint64_t secCount = currentNode->count; //
-
-        if(secCount == 0) { //Current node is done -> the type that's encoded switches
-            type += type % 2;
-        }
+        serialByte = 0b00000000;
+        
         while(secCount > 0) {
-
+            
             if(secCount >= 64) {
-                resultSize += 2;
-                if(type == 0) { serialByte | 1; } //Set type to first bit
-                else { serialByte & 0; }
-                serialByte << 6;
-                serialByte | 63;
+                
+                if(type == 1) { serialByte = 0b10000000; } //Set type to first bit
+                else { serialByte = 0b00000000; }
+                //serialByte << 6;
+                serialByte |= 0b01111111;
                 secCount -= 63;
 
                 if(halfbyte != 0) {
                     uint8_t temp = serialByte;
                     temp >> 4;
-                    halfbyte << 4;
-                    halfbyte | temp;
+                    //halfbyte << 4;
+                    halfbyte |= temp;
                     serialResult[serialResultIndex++] = (char) halfbyte;
                     serialByte << 4;
                     halfbyte = serialByte;
@@ -250,57 +267,306 @@ char* serialize_rle(RLE* rle, size_t* size) {
             }
 
             else if(secCount > 3) {
-                resultSize += 2;
-                if(type == 0) { serialByte | 1; }
-                else { serialByte & 0; }
-                serialByte << 6;
-                serialByte | secCount;
+                if(type == 1) { serialByte = 0b100000000; }
+                else { serialByte = 0b00000000; }
+                //serialByte << 6;
+                serialByte |= 0b01000000;
+                serialByte |= secCount;
+                
                 secCount = 0;
 
                 if(halfbyte != 0) {
                     uint8_t temp = serialByte;
                     temp >> 4;
                     halfbyte << 4;
-                    halfbyte | temp;
+                    halfbyte |= temp;
+                    printf("if halfbyte != 0: %d \n", halfbyte);
                     serialResult[serialResultIndex++] = (char) halfbyte;
                     serialByte << 4;
                     halfbyte = serialByte;
                 }
-
-                else { serialResult[serialResultIndex++] = (char) serialByte; }
+                
+                else {
+                    printf("else: %d \n", serialByte);
+                    serialResult[serialResultIndex++] = (char) serialByte;
+                }
+                
             }
 
             else {
-                resultSize += 1;
-                if(type == 0) { serialByte | 1; }
-                else { serialByte & 0; }
-                serialByte << 2;
-                serialByte | secCount;
+                
+                if(type == 1) { serialByte = 0b1000; }
+                else { serialByte = 0b0000; }
+                //serialByte << 2;
+                
+                serialByte |= secCount;
+                printf("serialByte: %d", serialByte);
                 secCount = 0;
                 
                 if(halfbyte != 0) {
                     uint8_t temp = serialByte;
                     temp >> 4;
                     halfbyte << 4;
-                    halfbyte | temp;
+                    halfbyte |= temp;
+                    
                     serialResult[serialResultIndex++] = (char) halfbyte;
+                    
                     serialByte << 4;
-                    if(serialByte == 0) {
-                        serialResult[serialResultIndex++] = (char) halfbyte;
+                    if(serialByte != 0) {
+                        halfbyte = serialByte;
                     }
+                    else { halfbyte = 0; }
+                    
+                }
+                else {
                     halfbyte = serialByte;
                 }
+                printf("Result: %c \n", serialResult[serialResultIndex]);
+                
 
             }
+
             
         }
+        type++;
+        type = type % 2;
+        printf("type: %d \n", type);
+    }
+    if(halfbyte != 0) {
+        serialResult[serialResultIndex++] = (char) halfbyte;
     }
     serialResult[serialResultIndex++] = '\0';
-    char* result = malloc(resultSize/2 + 1);
-    *result = serialResult;
+    for(char* temp = serialResult; *temp != '\0'; temp++) {
+        printf("rawr%c", *temp);
+    }
+    
+    return serialResult;
+*/
+    // Calculate size of result to allocate memory
+    int  resultSize = 0;
+    RLENode* node = rle->head;
+
+    while (node) {
+        uint64_t currentCount = node->count;
+        while (currentCount > 63) {
+            resultSize += 2;
+            currentCount -= 63;
+        }
+        if (currentCount > 3) {
+            resultSize += 2;
+        }  else if (currentCount > 0) { // Wenn aktuell = 63, dann muss hier > 0 überprüft werden
+            resultSize += 1;
+        }
+        node = node->next;
+    }
+
+    char* result = malloc((resultSize + 1) / 2);
+
+	node = rle->head;           // current node in interation
+	uint8_t type = 0;           // What is encoded
+	uint8_t byte = 0;           // 
+	uint8_t halfbyte = 0;
+	uint8_t temp_byte;
+	uint8_t halfbyte_check = 0;
+	uint8_t case_value = 0;
+	uint64_t currentCount = 0;  //count of current node or what is left
+	uint64_t resultIndex = 0;   
+
+	while (node) {
+
+		currentCount = node->count;
+		if (currentCount == 0) {
+			type++;
+            type = type % 2;
+		}
+
+		while (currentCount > 0) {
+
+			if (halfbyte_check == 0) { //Bytegrenze
+
+				if (currentCount > 63) {
+
+					case_value = 63;
+					byte = (type == 0) ? 0b01000000 : 0b11000000;
+					byte |= case_value;
+					result[resultIndex++] = (char) byte;
+					currentCount -= 63;
+
+				}
+
+				else if (currentCount > 3) {
+
+					case_value = currentCount;
+					byte = (type % 2 == 0) ? 0b01000000 : 0b11000000;
+					byte |= case_value;
+					result[resultIndex++] = (char) byte;
+					currentCount = 0;
+					type++;
+
+				}
+
+				else {
+
+					case_value = currentCount;
+					byte = (type % 2 == 0) ? 0b00000000 : 0b00001000;
+					byte |= case_value;
+					halfbyte |= byte;
+					halfbyte <<= 4;
+					halfbyte_check = 1;
+					currentCount = 0;
+					type++;
+
+					}
+			} else { //Halfbytegrenze
+
+				if (currentCount > 63) {
+
+					case_value = 63;
+					byte = (type % 2 == 0) ? 0b01000000 : 0b11000000;
+					byte |= case_value;
+					temp_byte = byte; //BBBB CCCC
+					byte >>= 4; // 0000 BBBB
+					byte |= halfbyte; // AAAA BBBB
+					halfbyte = temp_byte << 4; // CCCC 0000
+					result[resultIndex++] = (char) byte;
+					currentCount -= 63;
+
+				}
+				else if (currentCount > 3) {
+
+					case_value = currentCount;
+					byte = (type % 2 == 0) ? 0b01000000 : 0b11000000;
+					byte |= case_value;
+					temp_byte = byte;
+					byte >>= 4;
+					byte |= halfbyte;
+					halfbyte = temp_byte << 4;
+					result[resultIndex++] = (char) byte;
+					currentCount = 0;
+					type++;
+
+				}
+				else {
+					case_value = currentCount;
+					byte = (type % 2 == 0) ? 0b00000000 : 0b00001000;
+					byte |= case_value;
+					byte |= halfbyte;
+					result[resultIndex++] = (char) byte;
+					currentCount = 0;
+					type++;
+					halfbyte_check = 0;
+				}
+			}
+		}
+		node = node->next;
+	}
+
+	if (halfbyte_check == 1) {result[resultIndex++] = (char) halfbyte;}
+
+	//*size = resultIndex;
+
     return result;
+
 }
 
 void deserialize_rle(RLE *rle, const char *data, size_t size) {
-   
+    /**
+    RLENode currentRLENode;
+    rle->head = &currentRLENode;
+    rle->tail = &currentRLENode;
+    rle->size = 1;
+    int secCount;
+    uint64_t count;
+    bool type = 0;
+ 
+    for(int* halfbyte = (int) data; halfbyte != '\0'; halfbyte+4) {
+        if(*halfbyte & 0){
+
+        }
+    }
+    */
+    size_t index = 0;
+	uint64_t mul_byte = 0;
+	uint8_t byte = data[0];
+
+	if ((byte & 0b10000000) > 0) {append_to_rle(rle, 0);}
+
+	while (index < size * 8) {
+
+		if (index % 8 == 0) {  //Bytegrenze
+
+			byte = data[index / 8];
+
+			if ((byte & 0b01000000) != 0) { //Modus 1, ganzes Byte
+
+				byte &= 0b00111111; //Maske für Anzahl
+				if (byte == 63) {
+					mul_byte += 63; //Run
+				} else if (mul_byte > 0) {
+					append_to_rle(rle, mul_byte + byte);
+					mul_byte = 0;
+				}
+				else {
+					append_to_rle(rle, byte);
+				}
+				index += 8;
+
+			} else { //Modus 0, vorderes Halfbyte
+				byte >>= 4;
+				byte &= 0b00000011; //Maske für Anzahl
+				if (mul_byte > 0) {
+					append_to_rle(rle, mul_byte + byte);
+					mul_byte = 0;
+				} else {
+					append_to_rle(rle, byte);
+				}
+				index+= 4;
+
+			}
+
+		} else { //Halfbytegrenze
+
+ 			uint8_t byte = data[index / 8];
+			if ((byte & 0x0F) == 0) {break;} //wenn Padding -> ende
+			if ((byte & 0b00000100) > 0) { //Modus 1 an der Haldbytegrenze
+
+				uint8_t extended_byte = data[index / 8 + 1]; //vordere Hälfte vom nächsten Byte
+
+				byte &= 0x0F; //Maske für zweite Hälfte des Bytes 0000 AAAA
+				byte <<= 4; // AAAA 0000
+				extended_byte &= 0xF0; //Maske für erste Hälfte des Bytes BBBB 0000
+				extended_byte >>= 4; // 0000 BBBB
+				byte |= extended_byte; // AAAA BBBB
+				byte &= 0b00111111;
+
+				if (byte == 63) {
+					mul_byte += 63;
+				}
+				else if (mul_byte > 0) {
+					append_to_rle(rle, mul_byte + byte);
+					mul_byte = 0;
+				}
+				else {
+					append_to_rle(rle, byte);
+				}
+
+				index+= 8;
+
+			} else { //Modus 0 bei Halfbytegrenze
+
+				byte &= 0b00000011; //Maske für Anzahl
+				if (mul_byte > 0) {
+					append_to_rle(rle, mul_byte + byte);
+					mul_byte = 0;
+				} else {
+					append_to_rle(rle, byte);
+				}
+				index+= 4;
+
+			}
+		}
+	}
+
+	uint64_t trash = 0;
+	pop_head_rle(rle, &trash);
 }
