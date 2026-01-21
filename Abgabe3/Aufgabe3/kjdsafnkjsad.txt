@@ -1,0 +1,11 @@
+uint8_t nextByte = data[(index / 8) + 1];
+				currentType = byte & 0b10000000;
+				nextType = nextByte & 0b10000000;
+				byte &= 0b00111111; //
+				if (byte == 63) {
+					if(currentType == nextType) {
+						tempCount += 63;
+					}
+					else { append_to_rle(rle, byte); }
+
+				}
