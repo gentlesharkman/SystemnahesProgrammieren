@@ -305,7 +305,7 @@ char* serialize_rle(RLE *rle, size_t* size) {
 
 
 void deserialize_rle(RLE *rle, const char *data, size_t size) {
-	size_t index = 0;		// b
+	size_t index = 0;		// 
 	uint64_t tempCount = 0; // Temp count incase more than 2 sections for one node
 	uint8_t byte = data[0]; // Iteration through the bytes in result string
 	uint8_t currentType;
@@ -366,14 +366,21 @@ void deserialize_rle(RLE *rle, const char *data, size_t size) {
 
 				// stitch byte together
 				byte &= 0x0F; 
-				byte <<= 4; 
+				byte <<= 4;
+				nextType = (extended_byte & 0b00001000) << 4;
 				extended_byte &= 0xF0; 
 				extended_byte >>= 4; 
 				byte |= extended_byte; 
 				byte &= 0b00111111;
 
+				
+				currentType = byte & 0b10000000;
+				byte &= 0b00111111; //
 				if (byte == 63) {
-					tempCount += 63;
+					if(currentType == nextType) {
+						tempCount += 63;
+					}
+					else { append_to_rle(rle, byte); }
 				}
 				else if (tempCount > 0) {
 					append_to_rle(rle, tempCount + byte);
@@ -404,3 +411,4 @@ void deserialize_rle(RLE *rle, const char *data, size_t size) {
 	pop_head_rle(rle, &trash);
 
 }
+
